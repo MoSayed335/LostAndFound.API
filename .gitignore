@@ -1,0 +1,49 @@
+## Build and binary outputs
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+build/
+dist/
+
+## Visual Studio / VS Code / IDEs
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+.idea/
+*.swp
+*~
+
+## Test Results and Coverage
+TestResults/
+[Tt]est[Rr]esult*
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+
+## User-specific / Environment / Secrets
+*.local.json
+appsettings.Production.json
+appsettings.*.local.json
+secrets.json
+.env
+.env.*
+
+## Uploaded Media (Preserve folder structure via .gitkeep)
+LostAndFound.API/wwwroot/uploads/**/*
+!LostAndFound.API/wwwroot/uploads/**/.gitkeep
+
+## OS generated files
+Thumbs.db
+[Ee]hthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

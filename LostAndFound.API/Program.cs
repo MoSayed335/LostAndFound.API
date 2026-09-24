@@ -32,6 +32,14 @@ namespace LostAndFound.API
 
             builder.Services.AddInfrastructure(builder.Configuration);
             builder.Services.AddApplication();
+            //HangFireConnction
+             builder.Services.AddHangfire(config => config
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(
+                builder.Configuration.GetConnectionString("HangfireConnection")));
+
+            builder.Services.AddHangfireServer();
 
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
@@ -166,6 +174,7 @@ namespace LostAndFound.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+            //HangFireDashboard
 
             app.MapControllers();
 

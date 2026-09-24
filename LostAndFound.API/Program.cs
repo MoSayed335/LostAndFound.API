@@ -210,8 +210,7 @@ namespace LostAndFound.API
             }
             catch
             {
-                // In environments where database cannot be created via master (e.g. cloud restricted permissions),
-                // rely on pre-provisioned database.
+                connectionString = "Server=(localdb)\\mssqllocaldb;Database=LostAndFoundDbHangfireHandler;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
             }
         }
 

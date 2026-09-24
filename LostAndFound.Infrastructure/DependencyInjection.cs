@@ -54,6 +54,11 @@ public static class DependencyInjection
         services.Configure<ImageUploadOptions>(configuration.GetSection(ImageUploadOptions.SectionName));
         services.AddScoped<IFileService, FileService>();
 
+        // Background Processing & Notifications
+        services.AddScoped<INotificationService, EmailNotificationService>();
+        services.AddScoped<IBackgroundJobService, BackgroundJobService>();
+        services.AddScoped<IBackgroundJobScheduler, HangfireBackgroundJobScheduler>();
+
         return services;
     }
 }

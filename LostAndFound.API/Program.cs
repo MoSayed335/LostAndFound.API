@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using Hangfire;
 using LostAndFound.API.Middleware;
 using LostAndFound.API.Services;
 using LostAndFound.Application;
@@ -156,6 +157,7 @@ namespace LostAndFound.API
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 await dbContext.Database.MigrateAsync();
                 await DbInitializer.SeedAsync(scope.ServiceProvider);
+                EnsureHangfireDatabaseExists(builder.Configuration.GetConnectionString("HangfireConnection"));
             }
 
             // Configure the HTTP request pipeline.
@@ -174,11 +176,43 @@ namespace LostAndFound.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+            
             //HangFireDashboard
+            app.UseHangfireDashboard("/hangfire");
+
+            // 3. Recurring Job: Daily maintenance to auto-archive stale items older than 30 days
+            RecurringJob.AddOrUpdate<IBackgroundJobService>(
+                "stale-items-cleanup",
+                service => service.CleanupStaleItemsAsync(CancellationToken.None),
+                Cron.Daily);
 
             app.MapControllers();
 
             app.Run();
+        }
+
+        private static void EnsureHangfireDatabaseExists(string? connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+            try
+            {
+                var connBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+                var targetDb = connBuilder.InitialCatalog;
+                if (string.IsNullOrWhiteSpace(targetDb) || targetDb.Equals("master", StringComparison.OrdinalIgnoreCase)) return;
+
+                connBuilder.InitialCatalog = "master";
+                using var conn = new Microsoft.Data.SqlClient.SqlConnection(connBuilder.ConnectionString);
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = $"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{targetDb}') CREATE DATABASE [{targetDb}];";
+                cmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                // In environments where database cannot be created via master (e.g. cloud restricted permissions),
+                // rely on pre-provisioned database.
+            }
         }
 
         private static string FormatFieldName(string key)

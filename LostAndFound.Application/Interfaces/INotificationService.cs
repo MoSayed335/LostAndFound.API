@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace LostAndFound.Application.Interfaces;
 
-namespace JobApplication.Application.Interfaces
+public interface INotificationService
 {
-    public interface INotificationService
-    {
-      void NotifyRecruiter(int applicationId);
-    }
+    Task SendItemCreatedNotificationAsync(int itemId, CancellationToken cancellationToken = default);
+    Task SendClaimReminderNotificationAsync(int claimId, CancellationToken cancellationToken = default);
+    Task SendItemMatchesNotificationAsync(int itemId, int matchCount, CancellationToken cancellationToken = default);
 }

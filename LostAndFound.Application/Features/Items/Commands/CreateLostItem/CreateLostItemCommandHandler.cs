@@ -14,15 +14,18 @@ public class CreateLostItemCommandHandler : IRequestHandler<CreateLostItemComman
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileService _fileService;
     private readonly ILogger<CreateLostItemCommandHandler> _logger;
+    private readonly IBackgroundJobScheduler? _backgroundJobScheduler;
 
     public CreateLostItemCommandHandler(
         IUnitOfWork unitOfWork,
         IFileService fileService,
-        ILogger<CreateLostItemCommandHandler> logger)
+        ILogger<CreateLostItemCommandHandler> logger,
+        IBackgroundJobScheduler? backgroundJobScheduler = null)
     {
         _unitOfWork = unitOfWork;
         _fileService = fileService;
         _logger = logger;
+        _backgroundJobScheduler = backgroundJobScheduler;
     }
 
     public async Task<Result<ItemResponseDto>> Handle(CreateLostItemCommand request, CancellationToken cancellationToken)
@@ -52,6 +55,18 @@ public class CreateLostItemCommandHandler : IRequestHandler<CreateLostItemComman
             await _unitOfWork.Items.AddAsync(item, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Item {ItemId} (Lost) created by user {UserId} in category {CategoryId}", item.Id, item.UserId, item.CategoryId);
+
+            if (_backgroundJobScheduler is not null)
+            {
+                // 1. Fire-and-Forget Job: Asynchronously process matches without blocking HTTP response
+                var parentJobId = _backgroundJobScheduler.Enqueue<IBackgroundJobService>(
+                    service => service.ProcessItemMatchesAsync(item.Id, CancellationToken.None));
+
+                // 4. Continuation Job: Chain post-processing summary notification
+                _backgroundJobScheduler.ContinueWith<IBackgroundJobService>(
+                    parentJobId,
+                    service => service.SendItemProcessingSummaryAsync(item.Id, CancellationToken.None));
+            }
         }
         catch
         {

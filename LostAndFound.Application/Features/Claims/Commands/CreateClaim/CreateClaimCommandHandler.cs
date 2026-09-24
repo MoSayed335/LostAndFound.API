@@ -12,11 +12,16 @@ public class CreateClaimCommandHandler : IRequestHandler<CreateClaimCommand, Res
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CreateClaimCommandHandler> _logger;
+    private readonly IBackgroundJobScheduler? _backgroundJobScheduler;
 
-    public CreateClaimCommandHandler(IUnitOfWork unitOfWork, ILogger<CreateClaimCommandHandler> logger)
+    public CreateClaimCommandHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<CreateClaimCommandHandler> logger,
+        IBackgroundJobScheduler? backgroundJobScheduler = null)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _backgroundJobScheduler = backgroundJobScheduler;
     }
 
     public async Task<Result<ClaimResponseDto>> Handle(CreateClaimCommand request, CancellationToken cancellationToken)
@@ -61,6 +66,11 @@ public class CreateClaimCommandHandler : IRequestHandler<CreateClaimCommand, Res
         await _unitOfWork.Claims.AddAsync(claim, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Claim {ClaimId} created on item {ItemId} by claimant {ClaimantId}", claim.Id, claim.ItemId, claim.ClaimantId);
+
+        // 2. Delayed Job: Schedule a reminder check in 24 hours if claim remains unreviewed
+        _backgroundJobScheduler?.Schedule<IBackgroundJobService>(
+            service => service.CheckPendingClaimReminderAsync(claim.Id, CancellationToken.None),
+            TimeSpan.FromHours(24));
 
         var response = new ClaimResponseDto(
             claim.Id,

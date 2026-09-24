@@ -1,15 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace JobApplication.Application.Interfaces
+namespace LostAndFound.Application.Interfaces;
+
+public interface IBackgroundJobScheduler
 {
-    public interface IBackgroundJobScheduler
-    {
-        void Enqueue<T>(Expression<Action<T>> methodCall);
-        void Schedule<T>(Expression<Action<T>> methodCall, TimeSpan delay);
-    }
+    // 1. Fire-and-Forget Job
+    string Enqueue<T>(Expression<Action<T>> methodCall);
+    string Enqueue<T>(Expression<Func<T, Task>> methodCall);
+
+    // 2. Delayed Job
+    string Schedule<T>(Expression<Action<T>> methodCall, TimeSpan delay);
+    string Schedule<T>(Expression<Func<T, Task>> methodCall, TimeSpan delay);
+
+    // 3. Continuation Job
+    string ContinueWith<T>(string parentJobId, Expression<Action<T>> methodCall);
+    string ContinueWith<T>(string parentJobId, Expression<Func<T, Task>> methodCall);
+
+    // 4. Recurring Job
+    void AddOrUpdateRecurring<T>(string recurringJobId, Expression<Func<T, Task>> methodCall, string cronExpression);
+    void TriggerRecurring(string recurringJobId);
 }

@@ -1,30 +1,43 @@
-﻿using Hangfire;
-using JobApplication.Application.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+using Hangfire;
+using LostAndFound.Application.Interfaces;
 
-namespace JobApplication.Infrastructure.Services
+namespace LostAndFound.Infrastructure.Services;
+
+public class HangfireBackgroundJobScheduler : IBackgroundJobScheduler
 {
-    public class HangfireBackgroundJobScheduler : IBackgroundJobScheduler
+    private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly IRecurringJobManager _recurringJobManager;
+
+    public HangfireBackgroundJobScheduler(
+        IBackgroundJobClient backgroundJobClient,
+        IRecurringJobManager recurringJobManager)
     {
-        private readonly IBackgroundJobClient _backgroundJobClient;
-
-        public HangfireBackgroundJobScheduler(IBackgroundJobClient backgroundJobClient)
-        {
-            _backgroundJobClient = backgroundJobClient;
-        }
-
-        public void Enqueue<T>(Expression<Action<T>> methodCall)
-        {
-            _backgroundJobClient.Enqueue<T>(methodCall);
-        }
-        public void Schedule<T>(Expression<Action<T>> methodCall, TimeSpan delay)
-        {
-            _backgroundJobClient.Schedule<T>(methodCall, delay);
-        }
+        _backgroundJobClient = backgroundJobClient;
+        _recurringJobManager = recurringJobManager;
     }
+
+    public string Enqueue<T>(Expression<Action<T>> methodCall) =>
+        _backgroundJobClient.Enqueue<T>(methodCall);
+
+    public string Enqueue<T>(Expression<Func<T, Task>> methodCall) =>
+        _backgroundJobClient.Enqueue<T>(methodCall);
+
+    public string Schedule<T>(Expression<Action<T>> methodCall, TimeSpan delay) =>
+        _backgroundJobClient.Schedule<T>(methodCall, delay);
+
+    public string Schedule<T>(Expression<Func<T, Task>> methodCall, TimeSpan delay) =>
+        _backgroundJobClient.Schedule<T>(methodCall, delay);
+
+    public string ContinueWith<T>(string parentJobId, Expression<Action<T>> methodCall) =>
+        _backgroundJobClient.ContinueJobWith<T>(parentJobId, methodCall);
+
+    public string ContinueWith<T>(string parentJobId, Expression<Func<T, Task>> methodCall) =>
+        _backgroundJobClient.ContinueJobWith<T>(parentJobId, methodCall);
+
+    public void AddOrUpdateRecurring<T>(string recurringJobId, Expression<Func<T, Task>> methodCall, string cronExpression) =>
+        _recurringJobManager.AddOrUpdate<T>(recurringJobId, methodCall, cronExpression);
+
+    public void TriggerRecurring(string recurringJobId) =>
+        _recurringJobManager.Trigger(recurringJobId);
 }
